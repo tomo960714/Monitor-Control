@@ -103,13 +103,26 @@ def get_vcp(code: str, display: Optional[int] = None, bus: Optional[int] = None)
     cmd += ["getvcp", code]
     res = _run(cmd, timeout_s=5)
 
-    # Example:
-    # VCP code 0x10 (Brightness): current value =  50, max value = 100
-    m = re.search(r"current\s+value\s*=\s*(\d+)\s*,\s*max\s+value\s*=\s*(\d+)", res.stdout, re.IGNORECASE)
-    if not m:
-        raise DDCParseError(f"Could not parse getvcp output: {res.stdout.strip()}")
+    out = res.stdout.strip()
     
-    return VCPValue(code=code.upper(), current=int(m.group(1)), maximum=int(m.group(2)))
+    # Numeric format (e.g. brightness):
+    # VCP code 0x10 (Brightness): current value =  50, max value = 100
+    m = re.search(
+        r"current\s+value\s*=\s*(\d+)\s*,\s*max\s+value\s*=\s*(\d+)",
+        out,
+        re.IGNORECASE,
+    )
+    if m:
+        return VCPValue(code=code.upper(), current=int(m.group(1)), maximum=int(m.group(2)))
+
+    # Status format (commonly for 0xD6):
+    # VCP code 0xd6 (Power mode): DPM: On,  DPMS: Off (sl=0x01)
+    m = re.search(r"\(sl\s*=\s*0x([0-9a-fA-F]+)\)", out)
+    if m:
+        current = int(m.group(1), 16)
+        return VCPValue(code=code.upper(), current=current, maximum=0)
+
+    raise DDCParseError(f"Could not parse getvcp output for code {code}: {out}")
 
 def set_vcp(code: str, value: int, display: Optional[int] = None, bus: Optional[int] = None, sleep_multiplier: Optional[float] = None) -> None:
     cmd = ["ddcutil"]
