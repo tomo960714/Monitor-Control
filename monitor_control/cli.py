@@ -71,7 +71,7 @@ def power_off_cmd(
 ):
     t = _target_opts(display, bus)
     power.power_off(display=t["display"], bus=t["bus"])
-    print("Power state set to [bold]Off[/bold]")
+    print(f"Power state set to [bold]Off[/bold]")
 
 app.command("on")
 def power_on_cmd(
@@ -80,7 +80,7 @@ def power_on_cmd(
 ):
     t = _target_opts(display, bus)
     power.power_on(display=t["display"], bus=t["bus"])
-    print("Power state set to [bold]On[/bold]")
+    print(f"Power state set to [bold]On[/bold]")
 
 @app.command("toggle")
 def power_toggle_cmd(
@@ -89,4 +89,4 @@ def power_toggle_cmd(
 ):
     t = _target_opts(display, bus)
     state = power.toggle_power(display=t["display"], bus=t["bus"])
-    print("Power state [bold]{state}[/bold]")
+    print(f"Power state [bold]{state}[/bold]")
