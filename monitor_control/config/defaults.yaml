@@ -1,0 +1,10 @@
+# Optional config for default values and profiles
+
+monitos: []
+profiles:
+  night:
+    brightness: 20
+  day:
+    brightness: 80
+  game_mode:
+    brightness: 80

@@ -1,0 +1,28 @@
+Metadata-Version: 2.4
+Name: monitor-control
+Version: 0.1.0
+Summary: Local monitor control via ddcutil
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: typer>=0.12
+Requires-Dist: rich>=13.7
+Requires-Dist: PyYAML>=6.0
+
+# monitor-control
+
+A small Fedora-friendly monitor control tool using DDC/CI via `ddcutil`.
+
+## Requirements
+- `ddcutil` installed and working
+- DDC/CI enabled in monitor OSD
+- I2C permissions configured so `ddcutil detect` works without sudo
+
+## Install (dev)
+pip install -e .
+
+## Usage
+monitorctl list
+monitorctl get brightness --display 1
+monitorctl set brightness 60 --display 1
+monitorctl off --display 1
+monitorctl on --display 1
