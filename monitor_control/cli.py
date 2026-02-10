@@ -90,3 +90,9 @@ def power_toggle_cmd(
     t = _target_opts(display, bus)
     state = power.toggle_power(display=t["display"], bus=t["bus"])
     print(f"Power state [bold]{state}[/bold]")
+
+@app.command("gui")
+def gui_cmd():
+    """Launch the GTK GUI using system Python (Fedora)."""
+    import subprocess
+    subprocess.run(["/usr/bin/python3", "-m", "monitor_control.ui.app"], check=False)

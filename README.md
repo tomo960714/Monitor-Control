@@ -16,3 +16,4 @@ monitorctl get brightness --display 1
 monitorctl set brightness 60 --display 1
 monitorctl off --display 1
 monitorctl on --display 1
+
