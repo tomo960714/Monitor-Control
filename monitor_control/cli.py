@@ -95,4 +95,8 @@ def power_toggle_cmd(
 def gui_cmd():
     """Launch the GTK GUI using system Python (Fedora)."""
     import subprocess
-    subprocess.run(["/usr/bin/python3", "-m", "monitor_control.ui.app"], check=False)
+    r = subprocess.run(
+        ["/usr/bin/python3", "-m", "monitor_control.ui.app"],
+        text=True,
+    )
+    print(f"GUI exited with code {r.returncode}")

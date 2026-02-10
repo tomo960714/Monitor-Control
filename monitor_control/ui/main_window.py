@@ -5,83 +5,74 @@ from typing import Dict, Optional
 
 import gi
 gi.require_version("Gtk", "4.0")
-gi.require_version("Adw", "1")
 
-from gi.repository import Gtk, Adw, GLib
+from gi.repository import Gtk, GLib
 
 from monitor_control.services import discovery, brightness, power
 from monitor_control.core.errors import DDCError
 
 log = logging.getLogger(__name__)
 
-class MainWindow(Adw.ApplicationWindow):
+class MainWindow(Gtk.ApplicationWindow):
     """
     Simple Ui:
     - Enumerate windows
     - Brightness slider
     - Power toggle
     """
-    def __init__(self, application: Adw.Application) -> None:
+    def __init__(self, application: Gtk.Application) -> None:
         super().__init__(application=application)
         self.set_title("Monitor Control")
         self.set_default_size(760,520)
 
         self._debounce_handles: Dict[int, int] = {}  # display -> GLib source id
 
-        header = Adw.HeaderBar()
+        header = Gtk.HeaderBar()
         header.set_title_widget(Gtk.Label(label="Monitor Control"))
         self.set_titlebar(header)
 
-        self._status = Gtkk.Label(label="")
+        self._status = Gtk.Label(label="")
         self._status.set_xalign(0)
 
         refresh_btn = Gtk.Button(label="Refresh")
         refresh_btn.connect("clicked", self._on_refresh_clicked)
         header.pack_end(refresh_btn)
 
-        # main layout
+        self._list = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        self._list.set_margin_top(12)
+        self._list.set_margin_bottom(12)
+        self._list.set_margin_start(12)
+        self._list.set_margin_end(12)
+
         outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-        outer.set_margin_top(12)
-        outer.set_margin_bottom(12)
-        outer.set_margin_start(12)
-        outer.set_margin_end(12)
-
-        self._list_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-
-        outer.append(self._list_box)
-        outer.append(Adw.Separator())
+        outer.append(self._list)
+        outer.append(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
         outer.append(self._status)
 
         scroller = Gtk.ScrolledWindow()
         scroller.set_child(outer)
+        self.set_child(scroller)
 
-        self.set_content(scroller)
-
-        # initial load
         self._rebuild_monitor_list()
-    
+
+
     def _set_status(self, message: str) -> None:
         self._status.set_label(message)
     
     def _on_refresh_clicked(self, _button: Gtk.Button) -> None:
         self._rebuild_monitor_list()
 
-    def _rebuild_monitor_lsit(self) -> None:
-
-        #clear exitin widgets
-        child = self._list_box.get_first_child()
+    def _clear_monitor_list(self) -> None:
+        child = self._list.get_first_child()
         while child:
             next_child = child.get_next_sibling()
-            self._list_box.remove(child)
+            self._list.remove(child)
             child = next_child
+
+    def _rebuild_monitor_list(self) -> None:
         
-        try:
-            monitors = discovery.list_monitors()
-        except Exception as e:
-            log.exception("Failed to list monitors")
-            self._set_status(f"Error detecting monitors: {str(e)}")
-            return
-        
+        self._clear_monitor_list()
+        monitors = discovery.list_monitors()
         if not monitors:
             self._set_status("No monitors detected. Check DDC/CI + permissions.")
             return
@@ -89,20 +80,20 @@ class MainWindow(Adw.ApplicationWindow):
         self._set_status(f"Detected {len(monitors)} monitor(s).")
 
         for mon in monitors:
-            card = self._build_monitor_card(mon.display, mon.model, mon.mfg, mon.i2c_bus)
-            self._list_box.append(card)
+            self._list.append(self._build_monitor_card(mon.display, mon.model, mon.mfg, mon.i2c_bus))
 
     def _build_monitor_card(self, display: int, model: str, mfg: str, bus: int) -> Gtk.Widget:
+        frame = Gtk.Frame()
+        frame.set_margin_top(6)
 
-        title = f"Display {display}: {mfg} {model} (bus /dev/i2c-{bus})"
-
-        group = Adw.PreferenceGroup(title=title)
-
-        row_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=9)
-        row_box.set_margin_top(8)
-        row_box.set_margin_bottom(8)
-        row_box.set_margin_start(8)
-        row_box.set_margin_end(8)
+        v = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        v.set_margin_top(10)
+        v.set_margin_bottom(10)
+        v.set_margin_start(10)
+        v.set_margin_end(10)
+        title = Gtk.Label(label=f"Display {display}: {mfg} {model} (bus /dev/i2c-{bus})")
+        title.set_xalign(0)
+        v.append(title)
 
         # brightness row
         brightness_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
@@ -114,19 +105,18 @@ class MainWindow(Adw.ApplicationWindow):
         slider.set_hexpand(True)
         slider.set_draw_value(True)
 
-        #Load current brightness
         try:
             cur, mx = brightness.get_brightness(display=display)
             slider.set_range(0, mx if mx > 0 else 100)
             slider.set_value(cur)
-        except DDCError as e:
-            log.warning(f"Failed to get brightness for display {display}: {str(e)}")
+        except Exception:
             slider.set_sensitive(False)
 
         slider.connect("value-changed", self._on_brightness_changed, display)
 
         brightness_row.append(brightness_label)
         brightness_row.append(slider)
+        v.append(brightness_row)
 
         # power toggle row
         power_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
@@ -143,20 +133,11 @@ class MainWindow(Adw.ApplicationWindow):
         power_row.append(power_label)
         power_row.append(on_btn)
         power_row.append(off_btn)
+        v.append(power_row)
 
-        row_box.append(brightness_row)
-        row_box.append(power_row)
+        frame.set_child(v)
+        return frame
 
-        # wrap in a container
-        row = Adw.ActionRow()
-        row.set_title("Controls")
-        row.set_subtitle("Brightness and power")
-        row.add_suffix(row_box)
-        row.set_activatable(False)
-
-        group.add(row)
-        return group
-    
     def _on_power_on(self,_btn: Gtk.Button, display: int) -> None:
         
         try:
@@ -195,8 +176,7 @@ class MainWindow(Adw.ApplicationWindow):
                 self._debounce_handles.pop(display, None)  # clean up handle
             return False  # one-shot timer
         
-        handle = GLib.timeout_add(150, apply_value)
-        self._debounce_handles[display] = handle
+        self._debounce_handles[display] = GLib.timeout_add(150, apply_value)
         
             
 
