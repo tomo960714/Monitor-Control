@@ -64,7 +64,7 @@ def set_brightness_cmd(
     brightness.set_brightness(value, display=t["display"], bus=t["bus"])
     print(f"Brightness set to [bold]{value}[/bold]")
 
-app.command("off")
+@app.command("off")
 def power_off_cmd(
     display: int | None = typer.Option(None, "--display", "-d", help="ddcutil Display number"),
     bus: int | None = typer.Option(None, "--bus", "-b", help="ddcutil I2C bus number")
@@ -73,7 +73,7 @@ def power_off_cmd(
     power.power_off(display=t["display"], bus=t["bus"])
     print(f"Power state set to [bold]Off[/bold]")
 
-app.command("on")
+@app.command("on")
 def power_on_cmd(
     display: int | None = typer.Option(None, "--display", "-d", help="ddcutil Display number"),
     bus: int | None = typer.Option(None, "--bus", "-b", help="ddcutil I2C bus number")
@@ -100,3 +100,6 @@ def gui_cmd():
         text=True,
     )
     print(f"GUI exited with code {r.returncode}")
+
+if __name__ == "__main__":
+    app()

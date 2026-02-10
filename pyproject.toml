@@ -1,6 +1,6 @@
 [project]
 name = "monitor-control"
-version = "0.2.0"
+version = "0.3.0"
 description = "Local monitor control via ddcutil"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -10,8 +10,14 @@ dependencies = [
     "PyYAML>=6.0",
 ]
 
+[project.optional-dependencies]
+dev = [
+  "pytest>=8",
+  "ruff>=0.6",
+]
+
 [project.scripts]
 monitorctl = "monitor_control.cli:app"
 
 [tool.pytest.ini_options]
-testpaths = ["test"]
+testpaths = ["tests"]
