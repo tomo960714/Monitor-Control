@@ -1,5 +1,5 @@
 from . import ddcutil
+from .errors import DDCCommandError, DDCError, DDCParseError
 from .models import Monitor, VCPValue
-from .errors import DDCError,DDCCommandError,DDCParseError
 
-__all__ = ["ddcutil", "Monitor", "VCPValue", "DDCError", "DDCCommandError","DDCParseError"]
+__all__ = ["ddcutil", "Monitor", "VCPValue", "DDCError", "DDCCommandError", "DDCParseError"]

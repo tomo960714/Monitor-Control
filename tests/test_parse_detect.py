@@ -1,10 +1,8 @@
-from monitor_control.core.ddcutil import detect
-
 def test_detect_parsing_empty(monkeypatch):
     import monitor_control.core.ddcutil as d
 
     class R:
-        stdout =""
+        stdout = ""
         stderr = ""
         returncode = 0
 
