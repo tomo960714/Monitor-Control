@@ -8,13 +8,13 @@ from monitor_control.services import discovery,brightness,power
 app = typer.Typer(add_completion=False)
 
 @app.callback()
-def main():
+def main() -> None:
     setup_logging()
 
 def _target_opts(
         display: int | None = typer.Option(None, "--display", "-d", help="ddcutil Display number"),
         bus: int | None = typer.Option(None, "--bus", "-b", help="ddcutil I2C bus number")
-):
+) -> dict[str, int | None]:
     if display is None and bus is None:
         #defult to display 1 if no options are provided for now
         return {"display": 1, "bus": None}
@@ -23,7 +23,7 @@ def _target_opts(
     return {"display": display, "bus": bus}
 
 @app.command("list")
-def list_cmd():
+def list_cmd()-> None:
     mons = discovery.list_monitors()
     if not mons:
         print("[yellow]No monitors found. Ensure DDC/CI is enabled and permissions are set.[/yellow]")
@@ -49,7 +49,7 @@ app.add_typer(set_app, name="set")
 def get_brightness_cmd(
     display: int | None = typer.Option(None, "--display", "-d", help="ddcutil Display number"),
     bus: int | None = typer.Option(None, "--bus", "-b", help="ddcutil I2C bus number")
-):
+)-> None:
     t = _target_opts(display, bus)
     curr, mx = brightness.get_brightness(display=t["display"], bus=t["bus"])
     print(f"Brightness: [bold]{curr}[/bold]/{mx}")
@@ -59,7 +59,7 @@ def set_brightness_cmd(
     value: int = typer.Argument(..., help="Brightness value [0-100]"),
     display: int | None = typer.Option(None, "--display", "-d", help="ddcutil Display number"),
     bus: int | None = typer.Option(None, "--bus", "-b", help="ddcutil I2C bus number")
-):
+)-> None:
     t = _target_opts(display, bus)
     brightness.set_brightness(value, display=t["display"], bus=t["bus"])
     print(f"Brightness set to [bold]{value}[/bold]")
@@ -68,7 +68,7 @@ def set_brightness_cmd(
 def power_off_cmd(
     display: int | None = typer.Option(None, "--display", "-d", help="ddcutil Display number"),
     bus: int | None = typer.Option(None, "--bus", "-b", help="ddcutil I2C bus number")
-):
+)-> None:
     t = _target_opts(display, bus)
     power.power_off(display=t["display"], bus=t["bus"])
     print(f"Power state set to [bold]Off[/bold]")
@@ -77,7 +77,7 @@ def power_off_cmd(
 def power_on_cmd(
     display: int | None = typer.Option(None, "--display", "-d", help="ddcutil Display number"),
     bus: int | None = typer.Option(None, "--bus", "-b", help="ddcutil I2C bus number")
-):
+)-> None:
     t = _target_opts(display, bus)
     power.power_on(display=t["display"], bus=t["bus"])
     print(f"Power state set to [bold]On[/bold]")
@@ -86,13 +86,13 @@ def power_on_cmd(
 def power_toggle_cmd(
     display: int | None = typer.Option(None, "--display", "-d", help="ddcutil Display number"),
     bus: int | None = typer.Option(None, "--bus", "-b", help="ddcutil I2C bus number")
-):
+)-> None:
     t = _target_opts(display, bus)
     state = power.toggle_power(display=t["display"], bus=t["bus"])
     print(f"Power state [bold]{state}[/bold]")
 
 @app.command("gui")
-def gui_cmd():
+def gui_cmd()-> None:
     """Launch the GTK GUI using system Python (Fedora)."""
     import subprocess
     r = subprocess.run(

@@ -5,9 +5,9 @@ from typing import Optional
 class Monitor:
     display: int                    # ddcutil Display N
     i2c_bus: int                    # I2C bus number, e.g. 3 dor /dev/i2c-4
-    model: str = "Unknown"          # Monitor model, e.g. "LG 29UM68-P"
-    mfg: str = "Unknown"            # Manufacturer, e.g. "LG"
-    serial: Optional[str] = None    # Optional serial number
+    model: str                      # Monitor model, e.g. "LG 29UM68-P"
+    mfg: str                        # Manufacturer, e.g. "LG"
+    serial: str | None = None       # Optional serial number
 
 @dataclass(frozen=True)
 class VCPValue:
