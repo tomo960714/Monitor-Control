@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 import logging
-from typing import Dict, Optional
 
 import gi
+
 gi.require_version("Gtk", "4.0")
 
-from gi.repository import Gtk, GLib
+from gi.repository import GLib, Gtk
 
-from monitor_control.services import discovery, brightness, power
-from monitor_control.core.errors import DDCError
+from monitor_control.services import brightness, discovery, power
 
 log = logging.getLogger(__name__)
+
 
 class MainWindow(Gtk.ApplicationWindow):
     """
@@ -20,12 +20,13 @@ class MainWindow(Gtk.ApplicationWindow):
     - Brightness slider
     - Power toggle
     """
+
     def __init__(self, application: Gtk.Application) -> None:
         super().__init__(application=application)
         self.set_title("Monitor Control")
-        self.set_default_size(760,520)
+        self.set_default_size(760, 520)
 
-        self._debounce_handles: Dict[int, int] = {}  # display -> GLib source id
+        self._debounce_handles: dict[int, int] = {}  # display -> GLib source id
 
         header = Gtk.HeaderBar()
         header.set_title_widget(Gtk.Label(label="Monitor Control"))
@@ -55,10 +56,9 @@ class MainWindow(Gtk.ApplicationWindow):
 
         self._rebuild_monitor_list()
 
-
     def _set_status(self, message: str) -> None:
         self._status.set_label(message)
-    
+
     def _on_refresh_clicked(self, _button: Gtk.Button) -> None:
         self._rebuild_monitor_list()
 
@@ -70,17 +70,19 @@ class MainWindow(Gtk.ApplicationWindow):
             child = next_child
 
     def _rebuild_monitor_list(self) -> None:
-        
+
         self._clear_monitor_list()
         monitors = discovery.list_monitors()
         if not monitors:
             self._set_status("No monitors detected. Check DDC/CI + permissions.")
             return
-        
+
         self._set_status(f"Detected {len(monitors)} monitor(s).")
 
         for mon in monitors:
-            self._list.append(self._build_monitor_card(mon.display, mon.model, mon.mfg, mon.i2c_bus))
+            self._list.append(
+                self._build_monitor_card(mon.display, mon.model, mon.mfg, mon.i2c_bus)
+            )
 
     def _build_monitor_card(self, display: int, model: str, mfg: str, bus: int) -> Gtk.Widget:
         frame = Gtk.Frame()
@@ -127,8 +129,8 @@ class MainWindow(Gtk.ApplicationWindow):
         on_btn = Gtk.Button(label="On")
         off_btn = Gtk.Button(label="Off")
 
-        on_btn.connect("clicked",self._on_power_on, display)
-        off_btn.connect("clicked",self._on_power_off, display)
+        on_btn.connect("clicked", self._on_power_on, display)
+        off_btn.connect("clicked", self._on_power_off, display)
 
         power_row.append(power_label)
         power_row.append(on_btn)
@@ -138,8 +140,8 @@ class MainWindow(Gtk.ApplicationWindow):
         frame.set_child(v)
         return frame
 
-    def _on_power_on(self,_btn: Gtk.Button, display: int) -> None:
-        
+    def _on_power_on(self, _btn: Gtk.Button, display: int) -> None:
+
         try:
             power.power_on(display=display)
             self._set_status(f"Powered on display {display}.")
@@ -147,14 +149,14 @@ class MainWindow(Gtk.ApplicationWindow):
             log.exception(f"Failed to power on display {display}")
             self._set_status(f"Display {display}: Failed to power on: {str(e)}")
 
-    def _on_power_off(self,_btn: Gtk.Button, display: int) -> None:
+    def _on_power_off(self, _btn: Gtk.Button, display: int) -> None:
         try:
             power.power_off(display=display)
             self._set_status(f"Powered off display {display}.")
         except Exception as e:
             log.exception(f"Failed to power off display {display}")
             self._set_status(f"Display {display}: Failed to power off: {str(e)}")
-    
+
     def _on_brightness_changed(self, slider: Gtk.Scale, display: int) -> None:
 
         # Debounce rapid slider changes
@@ -175,10 +177,5 @@ class MainWindow(Gtk.ApplicationWindow):
             finally:
                 self._debounce_handles.pop(display, None)  # clean up handle
             return False  # one-shot timer
-        
+
         self._debounce_handles[display] = GLib.timeout_add(150, apply_value)
-        
-            
-
-
-

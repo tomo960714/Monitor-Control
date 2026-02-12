@@ -1,15 +1,14 @@
 import logging
 import re
-from subprocess import CompletedProcess
 import subprocess
 from dataclasses import dataclass
-from typing import List, Optional
-
+from subprocess import CompletedProcess
 
 from .errors import DDCCommandError, DDCParseError
 from .models import Monitor, VCPValue
 
 log = logging.getLogger(__name__)
+
 
 @dataclass(frozen=True)
 class RunResult:
@@ -17,10 +16,11 @@ class RunResult:
     stderr: str
     returncode: int
 
+
 def _run(cmd: list[str], timeout_s: int = 5) -> RunResult:
     """Run a command and return the result."""
     try:
-        p: CompletedProcess[str] =subprocess.run(
+        p: CompletedProcess[str] = subprocess.run(
             cmd,
             check=False,
             capture_output=True,
@@ -33,11 +33,14 @@ def _run(cmd: list[str], timeout_s: int = 5) -> RunResult:
         raise DDCCommandError(f"ddcutil command timed out after {timeout_s} seconds.") from e
 
     if p.returncode != 0:
-        raise DDCCommandError(f"ddcutil command failed with return code {p.returncode}.", stderr=p.stderr)
-    
+        raise DDCCommandError(
+            f"ddcutil command failed with return code {p.returncode}.", stderr=p.stderr
+        )
+
     return RunResult(p.stdout, p.stderr, p.returncode)
 
-def detect() -> List[Monitor]:
+
+def detect() -> list[Monitor]:
     """Parse detected monitors from ddcutil."""
 
     res = _run(["ddcutil", "detect"], timeout_s=10)
@@ -56,27 +59,27 @@ def detect() -> List[Monitor]:
     #       Manufacture year:     2022,  Week: 23
     #   VCP version:         2.1
     monitors: list[Monitor] = []
-    
+
     # Split by "Display N" blocks
     blocks = re.split(r"(?m)^\s*Display\s+(\d+)\s*$", text)
     # re.split returns: [prefix, disp1, block1, disp2, block2, ...]
 
     # Sanity check on the split result - we expect at least one monitor block (meaning at least 3 blocks: prefix, disp1, block1)
     if len(blocks) < 3:
-        return monitors # No monitors detected, return empty list
-    
-    it = iter(blocks[1:]) # Skip the prefix block
-    for disp_str, block in zip(it, it):
-        display=int(disp_str)
+        return monitors  # No monitors detected, return empty list
+
+    it = iter(blocks[1:])  # Skip the prefix block
+    for disp_str, block in zip(it, it, strict=True):
+        display = int(disp_str)
 
         bus_match = re.search(r"I2C\s+bus:\s*/dev/i2c-(\d+)", block)
         if bus_match is None:
-            bus_match = re.search (r"/dev/i2c-(\d+)", block)
-        
+            bus_match = re.search(r"/dev/i2c-(\d+)", block)
+
         if bus_match is None:
-            log.warning(f"Could not find I2C bus for display {display}. Skipping.")            
+            log.warning(f"Could not find I2C bus for display {display}. Skipping.")
             raise DDCParseError(f"Could not find I2C bus for display {display}.")
-        
+
         i2c_bus = int(bus_match.group(1))
 
         mfg: str = "Unknown"
@@ -88,28 +91,25 @@ def detect() -> List[Monitor]:
             raise DDCParseError("Could not parse manufacturer ID")
 
         mfg = m.group(1).strip()
-        
+
         m = re.search(r"Model:\s*(.+)", block)
         if m is None:
             raise DDCParseError("Could not parse model")
 
         model = m.group(1).strip()
-        
+
         m = re.search(r"Serial\s+number:\s*(.+)", block)
-        if m is None:
-            serial = None
-        else:
-            serial = m.group(1).strip()
-        
-        monitors.append(Monitor(display=display, i2c_bus=i2c_bus, mfg=mfg, model=model, serial=serial))
+        serial = None if m is None else m.group(1).strip()
+
+
+        monitors.append(
+            Monitor(display=display, i2c_bus=i2c_bus, mfg=mfg, model=model, serial=serial)
+        )
 
     return monitors
 
-def get_vcp(
-        code: str, 
-        display: int | None = None, 
-        bus: int | None = None
-        ) -> VCPValue:
+
+def get_vcp(code: str, display: int | None = None, bus: int | None = None) -> VCPValue:
     cmd: list[str] = ["ddcutil"]
     cmd += _target_args(display=display, bus=bus)
     cmd += ["getvcp", code]
@@ -136,17 +136,23 @@ def get_vcp(
         current = int(m_status.group(1), 16)
         return VCPValue(code=code.upper(), current=current, maximum=0)
 
-    target = f"display={display}" if display is not None else f"bus={bus}" if bus is not None else "default"
+    target = (
+        f"display={display}"
+        if display is not None
+        else f"bus={bus}"
+        if bus is not None
+        else "default"
+    )
     raise DDCParseError(f"Could not parse getvcp output (code={code.upper()}, {target}): {out}")
 
 
 def set_vcp(
-        code: str,
-        value: int,
-        display: int | None = None,
-        bus: int | None = None,
-        sleep_multiplier: float | None = None,
-    ) -> None:
+    code: str,
+    value: int,
+    display: int | None = None,
+    bus: int | None = None,
+    sleep_multiplier: float | None = None,
+) -> None:
     cmd: list[str] = ["ddcutil"]
 
     if sleep_multiplier is not None:
@@ -157,9 +163,12 @@ def set_vcp(
 
     _run(cmd, timeout_s=5)
 
-def _target_args(display: Optional[int] = None, bus: Optional[int] = None) -> list[str]:
+
+def _target_args(display: int | None = None, bus: int | None = None) -> list[str]:
     if display is not None and bus is not None:
-        raise ValueError("Cannot specify both display and bus. They are mutually exclusive ways to target a monitor.")
+        raise ValueError(
+            "Cannot specify both display and bus. They are mutually exclusive ways to target a monitor."
+        )
     if display is not None:
         return [f"--display={str(display)}"]
     if bus is not None:

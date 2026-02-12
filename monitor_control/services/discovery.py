@@ -1,14 +1,15 @@
 from __future__ import annotations
-from typing import List, Optional
 
 from monitor_control.core import ddcutil
 from monitor_control.core.models import Monitor
 
-def list_monitors() -> List[Monitor]:
+
+def list_monitors() -> list[Monitor]:
     """List all connected monitors."""
     return ddcutil.detect()
 
-def find_monitor(display: Optional[int] = None, bus: Optional[int] = None) -> Monitor:
+
+def find_monitor(display: int | None = None, bus: int | None = None) -> Monitor:
     """Find a monitor by display number or bus number."""
     monitors = list_monitors()
     if display is not None:
