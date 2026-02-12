@@ -1,10 +1,11 @@
-def test_detect_parsing_empty(monkeypatch):
+import pytest
+
+def test_detect_parsing_empty(monkeypatch: pytest.MonkeyPatch) -> None:
     import monitor_control.core.ddcutil as d
+    from monitor_control.core.ddcutil import RunResult
 
-    class R:
-        stdout = ""
-        stderr = ""
-        returncode = 0
+    def fake_run(cmd: list[str], timeout_s: int = 5) -> RunResult:
+        return RunResult(stdout="", stderr="", returncode=0)
 
-    monkeypatch.setattr(d, "_run", lambda *args, **kwargs: R())
+    monkeypatch.setattr(d, "_run", fake_run)
     assert d.detect() == []

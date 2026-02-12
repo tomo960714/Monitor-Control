@@ -19,9 +19,6 @@ dev = [
 [project.scripts]
 monitorctl = "monitor_control.cli:app"
 
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-
 [tool.mypy]
 python_version = "3.11"
 strict = true
@@ -53,3 +50,6 @@ ignore = ["B008"]
 
 [tool.ruff.format]
 quote-style = "double"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
