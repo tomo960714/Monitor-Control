@@ -1,8 +1,10 @@
 import logging
 import re
+from subprocess import CompletedProcess
 import subprocess
 from dataclasses import dataclass
 from typing import List, Optional
+
 
 from .errors import DDCCommandError, DDCParseError
 from .models import Monitor, VCPValue
@@ -18,7 +20,7 @@ class RunResult:
 def _run(cmd: list[str], timeout_s: int = 5) -> RunResult:
     """Run a command and return the result."""
     try:
-        p=subprocess.run(
+        p: CompletedProcess[str] =subprocess.run(
             cmd,
             check=False,
             capture_output=True,
@@ -68,68 +70,91 @@ def detect() -> List[Monitor]:
         display=int(disp_str)
 
         bus_match = re.search(r"I2C\s+bus:\s*/dev/i2c-(\d+)", block)
-        if not bus_match:
+        if bus_match is None:
             bus_match = re.search (r"/dev/i2c-(\d+)", block)
-        if not bus_match:
-            log.warning(f"Could not find I2C bus for display {display}. Skipping.")
-            
+        
+        if bus_match is None:
+            log.warning(f"Could not find I2C bus for display {display}. Skipping.")            
             raise DDCParseError(f"Could not find I2C bus for display {display}.")
         
         i2c_bus = int(bus_match.group(1))
 
-        mfg = "Unknown"
-        model = "Unknown"
-        serial = None
+        mfg: str = "Unknown"
+        model: str = "Unknown"
+        serial: str | None = None
 
         m = re.search(r"Mfg\s+id:\s*([A-Z0-9]{2,4})", block)
-        if m:
-            mfg = m.group(1).strip()
+        if m is None:
+            raise DDCParseError("Could not parse manufacturer ID")
+
+        mfg = m.group(1).strip()
         
         m = re.search(r"Model:\s*(.+)", block)
-        if m:
-            model = m.group(1).strip()
+        if m is None:
+            raise DDCParseError("Could not parse model")
+
+        model = m.group(1).strip()
         
         m = re.search(r"Serial\s+number:\s*(.+)", block)
-        if m:
+        if m is None:
+            serial = None
+        else:
             serial = m.group(1).strip()
         
         monitors.append(Monitor(display=display, i2c_bus=i2c_bus, mfg=mfg, model=model, serial=serial))
 
     return monitors
 
-def get_vcp(code: str, display: Optional[int] = None, bus: Optional[int] = None) -> VCPValue:
-    cmd = ["ddcutil"]
+def get_vcp(
+        code: str, 
+        display: int | None = None, 
+        bus: int | None = None
+        ) -> VCPValue:
+    cmd: list[str] = ["ddcutil"]
     cmd += _target_args(display=display, bus=bus)
     cmd += ["getvcp", code]
     res = _run(cmd, timeout_s=5)
 
     out = res.stdout.strip()
-    
+
     # Numeric format (e.g. brightness):
     # VCP code 0x10 (Brightness): current value =  50, max value = 100
-    m = re.search(
+    m_numeric = re.search(
         r"current\s+value\s*=\s*(\d+)\s*,\s*max\s+value\s*=\s*(\d+)",
         out,
         re.IGNORECASE,
     )
-    if m:
-        return VCPValue(code=code.upper(), current=int(m.group(1)), maximum=int(m.group(2)))
+    if m_numeric is not None:
+        current = int(m_numeric.group(1))
+        maximum = int(m_numeric.group(2))
+        return VCPValue(code=code.upper(), current=current, maximum=maximum)
 
     # Status format (commonly for 0xD6):
     # VCP code 0xd6 (Power mode): DPM: On,  DPMS: Off (sl=0x01)
-    m = re.search(r"\(sl\s*=\s*0x([0-9a-fA-F]+)\)", out)
-    if m:
-        current = int(m.group(1), 16)
+    m_status = re.search(r"\(sl\s*=\s*0x([0-9a-fA-F]+)\)", out)
+    if m_status is not None:
+        current = int(m_status.group(1), 16)
         return VCPValue(code=code.upper(), current=current, maximum=0)
 
-    raise DDCParseError(f"Could not parse getvcp output for code {code}: {out}")
+    target = f"display={display}" if display is not None else f"bus={bus}" if bus is not None else "default"
+    raise DDCParseError(f"Could not parse getvcp output (code={code.upper()}, {target}): {out}")
 
-def set_vcp(code: str, value: int, display: Optional[int] = None, bus: Optional[int] = None, sleep_multiplier: Optional[float] = None) -> None:
-    cmd = ["ddcutil"]
+
+def set_vcp(
+        code: str,
+        value: int,
+        display: int | None = None,
+        bus: int | None = None,
+        sleep_multiplier: float | None = None,
+    ) -> None:
+    cmd: list[str] = ["ddcutil"]
+
     if sleep_multiplier is not None:
-        cmd += [f"--sleep-multiplier={sleep_multiplier}"]
+        cmd.append(f"--sleep-multiplier={sleep_multiplier}")
+
     cmd += _target_args(display=display, bus=bus)
     cmd += ["setvcp", code, str(value)]
+
     _run(cmd, timeout_s=5)
 
 def _target_args(display: Optional[int] = None, bus: Optional[int] = None) -> list[str]:

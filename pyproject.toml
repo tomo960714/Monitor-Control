@@ -21,3 +21,21 @@ monitorctl = "monitor_control.cli:app"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unreachable = true
+warn_unused_ignores = true
+no_implicit_optional = true
+disallow_any_generics = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+pretty = true
+exclude = "(monitor_control/ui/|monitor_control/ui_tray/)"
+
+
+# Typer/Rich can be noisy depending on versions; keep this targeted:
+[[tool.mypy.overrides]]
+module = ["rich.*", "typer.*"]
+ignore_missing_imports = true
