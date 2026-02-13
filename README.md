@@ -1,6 +1,6 @@
 # MonitorControl
 
-A local Linux monitor control utility built on top of `ddcutil`.
+A local Linux monitor control utility built on top of `ddcutil`. Overengineered solution to fix my annoyance with status leds.
 
 MonitorControl allows you to control external monitors via DDC/CI directly from:
 
